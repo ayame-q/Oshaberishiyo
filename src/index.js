@@ -22,20 +22,24 @@ client.on(Events.VoiceStateUpdate, async (oldState, newState) => {
     const joinedChannel = newState.channel;
     const leftChannel = oldState.channel;
 
-    // 入室時のみ処理
-    if (!leftChannel && joinedChannel) {
-      const lastEntry = await db.findOne({ userId: user.id });
-
-      if (lastEntry && Date.now() - lastEntry.lastJoin < FIVE_MINUTES) {
-        // 5分以内の再入室は無視
-        return;
-      }
-
+    // 退室時刻を記録
+    if (leftChannel && !joinedChannel) {
       await db.update(
         { userId: user.id },
-        { $set: { userId: user.id, lastJoin: Date.now() } },
+        { $set: { userId: user.id, lastLeave: Date.now() } },
         { upsert: true }
       );
+    }
+
+    // 入室時の通知
+    if (!leftChannel && joinedChannel) {
+      const lastEntry = await db.findOne({ userId: user.id });
+      const lastLeaveTime = lastEntry?.lastLeave ?? 0;
+
+      if (lastLeaveTime && Date.now() - lastLeaveTime < FIVE_MINUTES) {
+        // 退室から5分以内 → 通知しない
+        return;
+      }
 
       const channelName = joinedChannel.name;
       const message = `${user.globalName} さん (<@${user.id}>) が ${channelName} に参加しました！`;

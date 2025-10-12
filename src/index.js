@@ -38,7 +38,7 @@ client.on(Events.VoiceStateUpdate, async (oldState, newState) => {
       );
 
       const channelName = joinedChannel.name;
-      const message = `「@${user.username}」さんが ${channelName} に参加しました！`;
+      const message = `${user.username} さん (<@${user.id}>) が ${channelName} に参加しました！`;
 
       const guild = await client.guilds.fetch(GUILD_ID);
       const notifyChannel = await guild.channels.fetch(NOTIFY_CHANNEL_ID);

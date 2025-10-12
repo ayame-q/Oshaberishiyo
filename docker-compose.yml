@@ -4,7 +4,7 @@ services:
   bot:
     build: .
     volumes:
-      - .:/usr/src/app/data
+      - .:/usr/src/app
       - ./data:/usr/src/app/data
       - /usr/src/app/node_modules
     env_file:

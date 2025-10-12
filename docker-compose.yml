@@ -4,8 +4,8 @@ services:
   bot:
     build: .
     volumes:
-      - .:/app
-      - ./data:/app/data
+      - .:/usr/src/app/data
+      - ./data:/usr/src/app/data
       - /usr/src/app/node_modules
     env_file:
       - .env

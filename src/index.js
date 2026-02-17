@@ -1,4 +1,4 @@
-import { Client, GatewayIntentBits, Events, ApplicationCommandOptionType, PermissionFlagsBits, ChannelType } from "discord.js";
+import { Client, GatewayIntentBits, Events, ApplicationCommandOptionType, PermissionFlagsBits, ChannelType, MessageFlags } from "discord.js";
 import { entries, servers } from "./db.js";
 
 const TOKEN = process.env.DISCORD_TOKEN;
@@ -50,7 +50,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
     if (!interaction.isChatInputCommand()) return;
 
     if (!interaction.guild) {
-      await interaction.reply({ content: "サーバー内で実行してください", ephemeral: true });
+      await interaction.reply({ content: "サーバー内で実行してください", flags: MessageFlags.Ephemeral });
       return;
     }
 
@@ -58,7 +58,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
 
     if (interaction.commandName === "set_notify_channel") {
       if (!hasManage) {
-        await interaction.reply({ content: "このコマンドを実行する権限がありません（管理者のみ）", ephemeral: true });
+        await interaction.reply({ content: "このコマンドを実行する権限がありません（管理者のみ）", flags: MessageFlags.Ephemeral });
         return;
       }
 
@@ -69,7 +69,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
       }
 
       if (!channel || !channel.isTextBased()) {
-        await interaction.reply({ content: "テキストチャンネルを選んでください", ephemeral: true });
+        await interaction.reply({ content: "テキストチャンネルを選んでください", flags: MessageFlags.Ephemeral });
         return;
       }
 
@@ -77,7 +77,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
       const botUser = client.user;
       const canSend = channel.permissionsFor?.(botUser)?.has?.(PermissionFlagsBits.SendMessages);
       if (canSend === false) {
-        await interaction.reply({ content: "ボットにこのチャンネルへの送信権限がありません。チャンネルの権限を確認してください。", ephemeral: true });
+        await interaction.reply({ content: "ボットにこのチャンネルへの送信権限がありません。チャンネルの権限を確認してください。", flags: MessageFlags.Ephemeral });
         return;
       }
 
@@ -92,32 +92,32 @@ client.on(Events.InteractionCreate, async (interaction) => {
         console.log(`🔧 通知チャンネルを保存しました: サーバー「${interaction.guild.name ?? interaction.guild.id}」 チャンネル「#${channel.name ?? channel.id}」 (ID: ${channel.id})`, saved);
       } catch (err) {
         console.error("❌ 設定の保存に失敗しました:", err);
-        await interaction.reply({ content: "設定の保存に失敗しました", ephemeral: true });
+        await interaction.reply({ content: "設定の保存に失敗しました", flags: MessageFlags.Ephemeral });
         return;
       }
 
-      await interaction.reply({ content: `${channel} を通知チャンネルに設定しました。`, ephemeral: true });
+      await interaction.reply({ content: `${channel} を通知チャンネルに設定しました。`, flags: MessageFlags.Ephemeral });
       return;
     }
 
     if (interaction.commandName === "get_notify_channel") {
       const cfg = await servers.findOne({ guildId: interaction.guild.id });
       if (!cfg?.notifyChannelId) {
-        await interaction.reply({ content: "通知チャンネルは設定されていません。", ephemeral: true });
+        await interaction.reply({ content: "通知チャンネルは設定されていません。", flags: MessageFlags.Ephemeral });
       } else {
-        await interaction.reply({ content: `現在の通知チャンネル: <#${cfg.notifyChannelId}> (ID: ${cfg.notifyChannelId})`, ephemeral: true });
+        await interaction.reply({ content: `現在の通知チャンネル: <#${cfg.notifyChannelId}> (ID: ${cfg.notifyChannelId})`, flags: MessageFlags.Ephemeral });
       }
       return;
     }
 
     if (interaction.commandName === "clear_notify_channel") {
       if (!hasManage) {
-        await interaction.reply({ content: "このコマンドを実行する権限がありません（管理者のみ）", ephemeral: true });
+        await interaction.reply({ content: "このコマンドを実行する権限がありません（管理者のみ）", flags: MessageFlags.Ephemeral });
         return;
       }
       await servers.remove({ guildId: interaction.guild.id }, { multi: false });
       console.log(`🗑️ 通知チャンネルの設定をクリアしました: サーバー「${interaction.guild.name ?? interaction.guild.id}」 (ID: ${interaction.guild.id})`);
-      await interaction.reply({ content: "通知チャンネルの設定をクリアしました。", ephemeral: true });
+      await interaction.reply({ content: "通知チャンネルの設定をクリアしました。", flags: MessageFlags.Ephemeral });
     }
 
   } catch (err) {

@@ -27,11 +27,11 @@ async function ensureGuildCommand(guild) {
     for (const cmd of needed) {
       if (!commands.some((c) => c.name === cmd.name)) {
         await guild.commands.create(cmd);
-        console.log(`✅ Created command ${cmd.name} for guild ${guild.id}`);
+        console.log(`✅ コマンド「${cmd.name}」をサーバー「${guild.name ?? guild.id}」に作成しました（ID: ${guild.id}）`);
       }
     }
   } catch (err) {
-    console.error("Failed to ensure guild command:", err);
+    console.error("❌ ギルドコマンドの登録に失敗しました:", err);
   }
 }
 
@@ -79,9 +79,9 @@ client.on(Events.InteractionCreate, async (interaction) => {
           { upsert: true }
         );
         const saved = await servers.findOne({ guildId: interaction.guild.id });
-        console.log(`Saved notifyChannelId=${channel.id} for guild=${interaction.guild.id} (db entry:`, saved, `)`);
+        console.log(`🔧 通知チャンネルを保存しました: サーバー「${interaction.guild.name ?? interaction.guild.id}」 チャンネル「#${channel.name ?? channel.id}」 (ID: ${channel.id})`, saved);
       } catch (err) {
-        console.error("Failed to save server config:", err);
+        console.error("❌ 設定の保存に失敗しました:", err);
         await interaction.reply({ content: "設定の保存に失敗しました", ephemeral: true });
         return;
       }
@@ -106,13 +106,12 @@ client.on(Events.InteractionCreate, async (interaction) => {
         return;
       }
       await servers.remove({ guildId: interaction.guild.id }, { multi: false });
-      console.log(`Cleared notifyChannelId for guild=${interaction.guild.id}`);
+      console.log(`🗑️ 通知チャンネルの設定をクリアしました: サーバー「${interaction.guild.name ?? interaction.guild.id}」 (ID: ${interaction.guild.id})`);
       await interaction.reply({ content: "通知チャンネルの設定をクリアしました。", ephemeral: true });
-      return;
     }
 
   } catch (err) {
-    console.error("Interaction handling error:", err);
+    console.error("❌ コマンド処理中にエラーが発生しました:", err);
   }
 });
 
@@ -129,7 +128,7 @@ client.on(Events.VoiceStateUpdate, async (oldState, newState) => {
     const joinedChannelId = newState.channelId;
     const leftChannelId = oldState.channelId;
 
-    console.log(`VoiceStateUpdate: user=${userId} guild=${guildId} joined=${joinedChannelId} left=${leftChannelId}`);
+    console.log(`🔔 ボイス状態更新: ユーザーID=${userId} サーバーID=${guildId} 入室=${joinedChannelId ?? 'なし'} 退室=${leftChannelId ?? 'なし'}`);
 
     // 退室時刻を記録
     if (leftChannelId && !joinedChannelId) {
@@ -138,6 +137,7 @@ client.on(Events.VoiceStateUpdate, async (oldState, newState) => {
         { $set: { userId, guildId, lastLeave: Date.now() } },
         { upsert: true }
       );
+      console.log(`⏱️ 退室時刻を記録しました: ユーザーID=${userId} サーバーID=${guildId} チャンネルID=${leftChannelId}`);
     }
 
     // 入室時の通知（未接続 -> 接続）
@@ -147,24 +147,24 @@ client.on(Events.VoiceStateUpdate, async (oldState, newState) => {
 
       if (lastLeaveTime && Date.now() - lastLeaveTime < FIVE_MINUTES) {
         // 退室から5分以内 → 通知しない
-        console.log(`Skip notify: user=${userId} recent leave ${Date.now() - lastLeaveTime}ms`);
+        console.log(`⏭️ 通知をスキップしました（直近に退室しています）: ユーザーID=${userId} 経過=${Date.now() - lastLeaveTime}ms`);
         return;
       }
 
       // サーバーごとの通知先を取得
       const serverConfig = await servers.findOne({ guildId });
       const notifyChannelId = serverConfig?.notifyChannelId;
-      console.log(`ServerConfig for guild=${guildId}:`, serverConfig);
+      console.log(`🔎 サーバー設定を取得しました: サーバーID=${guildId}`, serverConfig);
       if (!notifyChannelId) {
         // 設定されていなければ通知しない
-        console.log(`通知チャンネルが設定されていません: guild ${guildId}`);
+        console.log(`⚠️ 通知チャンネルが設定されていません: サーバーID=${guildId}`);
         return;
       }
 
       // guild と参加チャンネルを確実に取得
       const guild = await client.guilds.fetch(guildId).catch(() => null);
       if (!guild) {
-        console.error(`Guild ${guildId} を取得できませんでした`);
+        console.error(`❌ サーバー情報を取得できませんでした: サーバーID=${guildId}`);
         return;
       }
 
@@ -176,7 +176,7 @@ client.on(Events.VoiceStateUpdate, async (oldState, newState) => {
       const channelName = joinedChannel?.name ?? `(#${joinedChannelId})`;
       const message = `${displayName} さん (<@${userId}>) が ${channelName} に参加しました！`;
 
-      console.log(`Will send notify to channel=${notifyChannelId} message='${message}'`);
+      console.log(`✉️ 通知を送信します: サーバー「${guild.name ?? guildId}」 チャンネル「${joinedChannel?.name ?? notifyChannelId}」 (通知先ID: ${notifyChannelId}) メッセージ: ${message}`);
 
       const notifyChannel = await guild.channels.fetch(notifyChannelId).catch(() => null);
 
@@ -187,12 +187,12 @@ client.on(Events.VoiceStateUpdate, async (oldState, newState) => {
       }
     }
   } catch (err) {
-    console.error("Error on VoiceStateUpdate:", err);
+    console.error("❌ VoiceStateUpdate の処理中にエラーが発生しました:", err);
   }
 });
 
 client.once(Events.ClientReady, async () => {
-  console.log(`✅ Logged in as ${client.user.tag}`);
+  console.log(`✅ ログインしました: ${client.user.tag} (ID: ${client.user.id})`);
 
   // 起動時に既に参加しているギルドへコマンドを登録
   for (const guild of client.guilds.cache.values()) {

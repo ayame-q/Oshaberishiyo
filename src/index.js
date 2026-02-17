@@ -88,10 +88,9 @@ client.on(Events.InteractionCreate, async (interaction) => {
           { $set: { guildId: interaction.guild.id, notifyChannelId: channel.id } },
           { upsert: true }
         );
-        const saved = await servers.findOne({ guildId: interaction.guild.id });
-        console.log(`🔧 通知チャンネルを保存しました: サーバー「${interaction.guild.name ?? interaction.guild.id}」 チャンネル「#${channel.name ?? channel.id}」 (ID: ${channel.id})`, saved);
+        console.log(`🔧 通知チャンネルを保存しました: サーバー「${interaction.guild.name ?? interaction.guild.id}」（${interaction.guild.id}） チャンネル「#${channel.name ?? channel.id}」 (${channel.id})`);
       } catch (err) {
-        console.error("❌ 設定の保存に失敗しました:", err);
+        console.error(`❌ 設定の保存に失敗しました: サーバー「${interaction.guild.name ?? interaction.guild.id}」（${interaction.guild.id}） チャンネル「#${channel.name ?? channel.id}」 (${channel.id})\`)\n`, err);
         await interaction.reply({ content: "設定の保存に失敗しました", flags: MessageFlags.Ephemeral });
         return;
       }

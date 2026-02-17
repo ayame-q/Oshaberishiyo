@@ -17,17 +17,22 @@ async function ensureGuildCommand(guild) {
   try {
     const commands = await guild.commands.fetch();
     const needed = [
-      { name: "set_notify_channel", description: "このサーバーの通知を投稿するチャンネルを設定します", options: [
-        { name: "channel", description: "通知を送るテキストチャンネルを選択してください", type: ApplicationCommandOptionType.Channel, required: true, channel_types: [ChannelType.GuildText, ChannelType.GuildAnnouncement] }
-      ] },
-      { name: "get_notify_channel", description: "現在の通知先チャンネルを表示します" },
-      { name: "clear_notify_channel", description: "通知先チャンネルの設定を削除します" },
+      { name: "set_notify_channel", description: "ボイスチャンネルの入室通知を投稿するチャンネルを設定します", options: [
+        { name: "channel", description: "通知を送るテキストチャンネルを選択", type: ApplicationCommandOptionType.Channel, required: false, channel_types: [ChannelType.GuildText, ChannelType.GuildAnnouncement] }
+      ], default_member_permissions: PermissionFlagsBits.Administrator.toString(), dm_permission: false },
+      { name: "get_notify_channel", description: "現在の通知先チャンネルを表示します", default_member_permissions: PermissionFlagsBits.Administrator.toString(), dm_permission: false },
+      { name: "clear_notify_channel", description: "通知先チャンネルの設定を削除します", default_member_permissions: PermissionFlagsBits.Administrator.toString(), dm_permission: false },
     ];
 
     for (const cmd of needed) {
-      if (!commands.some((c) => c.name === cmd.name)) {
+      const existing = commands.find((c) => c.name === cmd.name);
+      if (!existing) {
         await guild.commands.create(cmd);
         console.log(`✅ コマンド「${cmd.name}」をサーバー「${guild.name ?? guild.id}」に作成しました（ID: ${guild.id}）`);
+      } else {
+        // 既存コマンドは権限やオプションを上書きして最新化
+        await guild.commands.edit(existing.id, cmd);
+        console.log(`🔄 コマンド「${cmd.name}」の設定をサーバー「${guild.name ?? guild.id}」で更新しました（ID: ${guild.id}）`);
       }
     }
   } catch (err) {
@@ -57,7 +62,12 @@ client.on(Events.InteractionCreate, async (interaction) => {
         return;
       }
 
-      const channel = interaction.options.getChannel("channel");
+      // チャンネル指定は任意。未指定ならコマンドを実行したチャンネルを使う
+      let channel = interaction.options.getChannel("channel");
+      if (!channel) {
+        channel = interaction.channel;
+      }
+
       if (!channel || !channel.isTextBased()) {
         await interaction.reply({ content: "テキストチャンネルを選んでください", ephemeral: true });
         return;
